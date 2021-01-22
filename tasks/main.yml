@@ -1,0 +1,71 @@
+---
+
+- name: install dependencies packages
+  apt:
+    name: "{{ packages }}"
+    state: latest
+    dpkg_options: 'force-confnew,force-confdef'
+    autoclean: yes
+    autoremove: yes
+    update_cache: yes
+    cache_valid_time: 3600
+  vars:
+    packages:
+    - apt-transport-https
+    - software-properties-common
+
+- name: add grafana key
+  apt_key:
+    url: "https://packages.grafana.com/gpg.key"
+    state: present
+
+- name: install grafana repo
+  apt_repository:
+    repo: "deb https://packages.grafana.com/oss/deb stable main"
+    state: present
+    filename: grafana-oss
+
+- name: install grafana
+  apt:
+    name: "{{ packages }}"
+    state: latest
+    dpkg_options: 'force-confnew,force-confdef'
+    autoclean: yes
+    autoremove: yes
+    update_cache: yes
+  vars:
+    packages:
+    - grafana
+
+- name: add additional configs
+  ini_file:
+    path: /etc/grafana/grafana.ini
+    section: "{{ item.section }}"
+    option: "{{ item.option }}"
+    value: "{{ item.value }}"
+  with_items: "{{ grafana_additional_configs }}"
+
+# Ansible 2.10
+#- name: add additional configs
+#  community.general.ini_file:
+#    path: /etc/grafana/grafana.ini
+#    section: "{{ item.section }}"
+#    option: "{{ item.option }}"
+#    value: "{{ item.value }}"
+#  with_items: "{{ grafana_additional_configs }}"
+
+- name: just force systemd to reread configs
+  systemd:
+    daemon_reload: yes
+
+- name: enable grafana-server
+  systemd:
+    name: grafana-server
+    enabled: yes
+
+- name: start grafana-server
+  systemd:
+    name: grafana-server
+    state: started
+
+...
